@@ -1,0 +1,86 @@
+import { describe, it, expect } from 'vitest';
+import { createForceComputer } from './energy';
+import { createWarpTransform } from './warp';
+import { createGamutChecker } from './gamut-clipping';
+import type { Particle, Vec3 } from './types';
+
+describe('ForceComputer', () => {
+  const warp = createWarpTransform(0.04);
+  const gamut = createGamutChecker();
+  const fc = createForceComputer(warp, gamut);
+
+  it('returns forces array matching particle count', () => {
+    const particles: Particle[] = [
+      { kind: 'free', position: { L: 0.3, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: { L: 0.7, a: -0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+    ];
+    const { forces, energy } = fc.computeForcesAndEnergy(particles, 2, 0.1);
+    expect(forces.length).toBe(2);
+    expect(energy).toBeGreaterThan(0);
+  });
+
+  it('repulsive force pushes particles apart', () => {
+    const particles: Particle[] = [
+      { kind: 'free', position: { L: 0.4, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: { L: 0.6, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+    ];
+    const { forces } = fc.computeForcesAndEnergy(particles, 2, 0);
+    // Particle 0 is at lower L, should be pushed to lower L (away from particle 1)
+    // Particle 1 is at higher L, should be pushed to higher L
+    // The L component of force on particle 0 should be negative (toward lower L)
+    expect(forces[0][0]).toBeLessThan(0);
+    // The L component of force on particle 1 should be positive
+    expect(forces[1][0]).toBeGreaterThan(0);
+  });
+
+  it('energy decreases as particles move apart', () => {
+    const close: Particle[] = [
+      { kind: 'free', position: { L: 0.49, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: { L: 0.51, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+    ];
+    const far: Particle[] = [
+      { kind: 'free', position: { L: 0.2, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: { L: 0.8, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+    ];
+    const closeE = fc.computeForcesAndEnergy(close, 2, 0).energy;
+    const farE = fc.computeForcesAndEnergy(far, 2, 0).energy;
+    expect(closeE).toBeGreaterThan(farE);
+  });
+
+  it('gamut penalty is zero for in-gamut particles', () => {
+    const particles: Particle[] = [
+      { kind: 'free', position: { L: 0.5, a: 0, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: { L: 0.7, a: 0.05, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+    ];
+    const withGamut = fc.computeForcesAndEnergy(particles, 2, 1.0);
+    const withoutGamut = fc.computeForcesAndEnergy(particles, 2, 0);
+    // Forces should be the same (no gamut penalty for in-gamut)
+    for (let i = 0; i < 2; i++) {
+      for (let j = 0; j < 3; j++) {
+        expect(withGamut.forces[i][j]).toBeCloseTo(withoutGamut.forces[i][j], 6);
+      }
+    }
+  });
+
+  it('pinned particles still get forces computed', () => {
+    const particles: Particle[] = [
+      { kind: 'pinned-vertex', position: { L: 0.3, a: 0.1, b: 0 }, vertexIndex: 0 },
+      { kind: 'free', position: { L: 0.7, a: -0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+    ];
+    const { forces } = fc.computeForcesAndEnergy(particles, 2, 0.1);
+    // Both get force vectors (caller decides which to apply)
+    expect(forces.length).toBe(2);
+  });
+
+  it('higher p exponent increases force on close pairs', () => {
+    const particles: Particle[] = [
+      { kind: 'free', position: { L: 0.45, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+      { kind: 'free', position: { L: 0.55, a: 0.1, b: 0 }, faceIndex: 0, bary: { w0: 1/3, w1: 1/3, w2: 1/3 } },
+    ];
+    const lowP = fc.computeForcesAndEnergy(particles, 2, 0);
+    const highP = fc.computeForcesAndEnergy(particles, 6, 0);
+    const lowMag = Math.sqrt(lowP.forces[0][0]**2 + lowP.forces[0][1]**2 + lowP.forces[0][2]**2);
+    const highMag = Math.sqrt(highP.forces[0][0]**2 + highP.forces[0][1]**2 + highP.forces[0][2]**2);
+    expect(highMag).toBeGreaterThan(lowMag);
+  });
+});
