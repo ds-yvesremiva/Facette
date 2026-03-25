@@ -1,4 +1,5 @@
 export { generatePalette, createPaletteStepper } from './facette';
+export { oklabToOklch, oklabToHex, hexToOklab } from './color-conversion';
 export type {
   PaletteOptions, PaletteResult, PaletteStepper,
   HullGeometry, LineGeometry, Geometry,
