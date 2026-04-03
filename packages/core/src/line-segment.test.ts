@@ -78,6 +78,17 @@ describe('LineConstraint', () => {
       }
     });
 
+    it('does not move pinned-1d particles', () => {
+      const mid: OKLab = { L: 0.5, a: 0, b: 0 };
+      const particle: Particle = { kind: 'pinned-1d', position: mid, t: 0.5 };
+      const result = constraint.applyDisplacement(particle, [1, 1, 1]);
+      expect(result.kind).toBe('pinned-1d');
+      if (result.kind === 'pinned-1d') {
+        expect(result.t).toBe(0.5);
+        expect(result.position).toEqual(mid);
+      }
+    });
+
     it('position matches t after displacement', () => {
       const particle: Particle = { kind: 'free-1d', position: { L: 0.5, a: 0, b: 0 }, t: 0.5 };
       const disp: [number, number, number] = [0.06, 0.02, 0];

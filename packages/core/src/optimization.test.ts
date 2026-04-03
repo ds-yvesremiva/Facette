@@ -38,6 +38,28 @@ describe('createAnnealingSchedule', () => {
   it('gamut penalty weight is positive', () => {
     expect(schedule.getGamutPenaltyWeight(0)).toBeGreaterThan(0);
   });
+
+  it('converges on displacement after p ramp', () => {
+    const s = createAnnealingSchedule({ rampIterations: 10 });
+    // After ramp: energy differs but displacement is tiny
+    expect(s.isConverged(15, 100.0, 100.5, 1e-7)).toBe(true);
+  });
+
+  it('converges on energy change after p ramp', () => {
+    const s = createAnnealingSchedule({ rampIterations: 10 });
+    // After ramp: energy change tiny, displacement large
+    expect(s.isConverged(15, 100.0, 100.0 + 1e-8, 0.5)).toBe(true);
+  });
+
+  it('converges when energy is near zero and displacement is tiny', () => {
+    const s = createAnnealingSchedule({ rampIterations: 10 });
+    expect(s.isConverged(15, 1e-35, 1e-35, 1e-7)).toBe(true);
+  });
+
+  it('does not converge when both energy and displacement are large', () => {
+    const s = createAnnealingSchedule({ rampIterations: 10 });
+    expect(s.isConverged(15, 100.0, 110.0, 0.5)).toBe(false);
+  });
 });
 
 describe('createOptimizationStepper', () => {

@@ -79,12 +79,21 @@ describe('seed classification', () => {
       }
     });
 
-    it('classifies mid-segment seed', () => {
+    it('classifies mid-segment seed as pinned-1d', () => {
       const mid: OKLab = { L: 0.5, a: 0, b: 0 };
       const particles = classifySeeds([mid], line);
+      expect(particles[0].kind).toBe('pinned-1d');
+      if (particles[0].kind === 'pinned-1d') {
+        expect(particles[0].t).toBeCloseTo(0.5);
+      }
+    });
+
+    it('classifies near-start seed as pinned-endpoint', () => {
+      const nearStart: OKLab = { L: 0.2 + 1e-8, a: -0.1 + 1e-9, b: 0 };
+      const particles = classifySeeds([nearStart], line);
       expect(particles[0].kind).toBe('pinned-endpoint');
       if (particles[0].kind === 'pinned-endpoint') {
-        expect(particles[0].t).toBeCloseTo(0.5);
+        expect(particles[0].t).toBe(0);
       }
     });
   });
