@@ -95,12 +95,12 @@ Then open `http://localhost:5173`. The dashboard shows:
 
 ### `generatePalette(seeds, size, options?)`
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `seeds` | `string[]` | Hex colors (e.g. `['#ff0000', '#0000ff']`). Minimum 2, must be distinct. |
-| `size` | `number` | Total palette size including seeds. Must be >= seed count. |
-| `options.vividness` | `number` | Gray avoidance strength. `0` = auto. Range `[0.005, 0.10]`. |
-| `options.gamma` | `number` | Chroma preservation strength. Default `1`. Must be `>= 1`. |
+|Parameter|Type|Description|
+|---------|----|-----------|
+|`seeds`|`string[]`|Hex colors (e.g. `['#ff0000', '#0000ff']`). Minimum 2, must be distinct.|
+|`size`|`number`|Total palette size including seeds. Must be >= seed count.|
+|`options.vividness`|`number`|Gray avoidance strength. `0` = auto. Range `[0.005, 0.10]`.|
+|`options.gamma`|`number`|Chroma preservation strength. Default `1`. Must be `>= 1`.|
 
 **Returns** `PaletteResult`:
 
@@ -140,6 +140,66 @@ Same parameters as `generatePalette`. Returns a `PaletteStepper`:
 7. **Output** — inverse-lift back to OKLab, gamut-clip, convert to sRGB hex
 
 The full algorithm specification is in [`Specs/Facette_algorithm_v5.md`](Specs/Facette_algorithm_v5.md).
+
+## Architecture
+
+Facette is built as a modular pipeline where each stage has a single, well-defined job. Think of it like an assembly line: raw seed colors enter one end, pass through a series of transformations, and emerge as a complete palette at the other.
+
+<p align="center">
+  <img src="docs/assets/architecture-pipeline.svg" alt="Algorithm pipeline: five seed colors flow through Radial Lift, Convex Hull geometry, greedy initialization, Riesz repulsion optimization, and output as a nine-color palette" width="800" />
+</p>
+
+### The pipeline, stage by stage
+
+**1. Input** — Your hex colors (e.g. `#e63946`) are parsed into [OKLab](https://bottosson.github.io/posts/oklab/), a perceptually uniform color space where equal distances correspond to equal visual differences. This is the foundation that makes "visually distinct" a measurable quantity.
+
+**2. Radial Lift** — OKLab is great, but it has a problem: the center of the space (low chroma) is where all the muddy, washed-out grays live. The radial lift applies a nonlinear stretch that pushes the low-chroma region inward, making it harder for colors to congregate there. The transformation is carefully designed so your original seed colors stay exactly where they are — only the space between them changes. The `vividness` and `gamma` options control the strength of this effect.
+
+**3. Geometry** — Now that we're in lifted space, the algorithm figures out the shape your seeds define. Two seeds define a line. Three or more seeds that happen to lie in a plane define a flat polygon. Otherwise, they define a 3D volume. In each case, Facette computes the [convex hull](https://en.wikipedia.org/wiki/Convex_hull) — the smallest shape that encloses all seeds. This hull becomes the surface that new colors are constrained to, which guarantees they stay within the chromatic family of your seeds.
+
+Under the hood, this step uses [Singular Value Decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition) (SVD) to detect dimensionality, then runs either a line-segment construction, a 2D convex hull (Graham scan), or a 3D convex hull (QuickHull) depending on the result.
+
+**4. Initialize** — Free particles (the new colors to generate) are placed on the hull surface using a greedy strategy. The algorithm picks the face with the most available space, samples a grid of candidate positions on that face, and selects the point that is farthest from all existing particles. This gives the optimizer a strong starting position rather than random noise.
+
+**5. Optimize** — This is where the physics simulation happens. Every particle exerts a repulsive force on every other particle (like electrons on a sphere), pushing them apart until they reach maximum separation. The forces use [Riesz energy](https://en.wikipedia.org/wiki/Riesz_potential) with an exponent that gradually ramps from 2 to 6 — starting soft for global exploration and ending sharp to fine-tune local spacing. Meanwhile, a gamut penalty nudges particles away from colors that would fall outside the displayable sRGB range. An annealing schedule controls step sizes and convergence.
+
+Throughout optimization, every particle is constrained to the hull surface. When a force pushes a particle off the edge of a triangle face, the algorithm detects the crossing and seamlessly transitions it to the adjacent face.
+
+**6. Output** — Final positions are inverse-lifted back to OKLab, gamut-clipped to ensure every color is displayable, and converted to hex strings. The result includes metadata like the minimum perceptual distance between any two colors (`minDeltaE`), iteration count, and how many colors needed clipping.
+
+### Module structure
+
+The codebase follows a strict separation of concerns — each file owns exactly one responsibility and exposes a narrow interface.
+
+<p align="center">
+  <img src="docs/assets/architecture-modules.svg" alt="Module dependency graph showing how facette.ts orchestrates all modules" width="800" />
+</p>
+
+| Module | Role |
+|--------|------|
+| `facette.ts` | Orchestrator — wires everything together, validates input, computes parameters |
+| `color-conversion.ts` | sRGB / OKLab / OKLCh transforms (Ottosson matrices) |
+| `radial-lift.ts` | Nonlinear space transform with exact inverse (quadratic formula) |
+| `dimensionality.ts` | SVD-based detection of whether seeds span 1D, 2D, or 3D |
+| `convex-hull.ts` | Builds the constraint surface (line, 2D polygon, or 3D hull) |
+| `atlas.ts` | Lazy-cached index of face bases, areas, and adjacency topology |
+| `seed-classification.ts` | Tags each seed as vertex / boundary / interior on the hull |
+| `initialization.ts` | Greedy area-weighted particle placement |
+| `optimization.ts` | Generator-based solver loop with annealing schedule |
+| `energy.ts` | Riesz repulsion + gamut penalty force computation |
+| `surface-navigation.ts` | Projects motion onto hull faces, handles edge crossings |
+| `line-segment.ts` | 1D constraint for the two-seed case |
+| `gamut-clipping.ts` | Binary-search chroma reduction to sRGB boundary |
+| `output.ts` | Formats final colors as hex, tracks clipped count |
+
+Shared utilities (`math.ts`, `barycentric.ts`, `svd.ts`, `types.ts`) provide vector/matrix primitives and type definitions.
+
+### Key design decisions
+
+- **Dependency injection** — The optimizer receives its force computer and motion constraint as arguments, not hardcoded imports. This makes each piece independently testable and swappable.
+- **Generator pattern** — The optimization loop is a generator that yields frames one at a time. The public `createPaletteStepper` API lets you step through the optimization frame by frame (for visualization) or run it to completion — same code path, no duplication.
+- **Discriminated unions** — Particles are tagged (`pinned-vertex`, `free`, `pinned-endpoint`, etc.) so TypeScript enforces exhaustive handling everywhere a particle's role matters.
+- **Lazy caching** — The atlas computes face bases and areas on first access and caches them, avoiding redundant linear algebra across thousands of optimizer iterations.
 
 ## License
 

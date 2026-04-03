@@ -1,0 +1,219 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#161b22"/>
+    </linearGradient>
+    <linearGradient id="stage1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e6394630"/>
+      <stop offset="100%" stop-color="#e6394610"/>
+    </linearGradient>
+    <linearGradient id="stage2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f4a26130"/>
+      <stop offset="100%" stop-color="#f4a26110"/>
+    </linearGradient>
+    <linearGradient id="stage3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#457b9d30"/>
+      <stop offset="100%" stop-color="#457b9d10"/>
+    </linearGradient>
+    <linearGradient id="stage4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2a9d8f30"/>
+      <stop offset="100%" stop-color="#2a9d8f10"/>
+    </linearGradient>
+    <linearGradient id="stage5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a855f730"/>
+      <stop offset="100%" stop-color="#a855f710"/>
+    </linearGradient>
+    <!-- Single orient="auto" marker for all arrows -->
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M0,0.5 L7,3 L0,5.5" fill="#8b949e" stroke="none"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="520" rx="12" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="450" y="38" text-anchor="middle" fill="#e6edf3" font-size="16" font-weight="600" letter-spacing="0.5">Algorithm Pipeline</text>
+  <line x1="320" y1="50" x2="580" y2="50" stroke="#30363d" stroke-width="1"/>
+
+  <!-- ═══════════ Stage 1: Input ═══════════ -->
+  <g transform="translate(30, 70)">
+    <rect width="155" height="120" rx="10" fill="url(#stage1)" stroke="#e63946" stroke-width="1.2" opacity="0.9"/>
+    <text x="78" y="24" text-anchor="middle" fill="#e63946" font-size="11" font-weight="700" letter-spacing="1">INPUT</text>
+    <line x1="20" y1="32" x2="135" y2="32" stroke="#e6394640" stroke-width="0.8"/>
+    <!-- 5 Color dots -->
+    <circle cx="22" cy="62" r="10" fill="#e63946"/>
+    <circle cx="47" cy="62" r="10" fill="#f4a261"/>
+    <circle cx="72" cy="62" r="10" fill="#457b9d"/>
+    <circle cx="97" cy="62" r="10" fill="#2a9d8f"/>
+    <circle cx="122" cy="62" r="10" fill="#1d3557"/>
+    <text x="78" y="90" text-anchor="middle" fill="#c9d1d9" font-size="10">Hex seed colors</text>
+    <text x="78" y="106" text-anchor="middle" fill="#8b949e" font-size="9">parsed to OKLab</text>
+  </g>
+
+  <!-- Arrow 1→2 -->
+  <line x1="190" y1="130" x2="220" y2="130" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ═══════════ Stage 2: Lift ═══════════ -->
+  <g transform="translate(225, 70)">
+    <rect width="155" height="120" rx="10" fill="url(#stage2)" stroke="#f4a261" stroke-width="1.2" opacity="0.9"/>
+    <text x="78" y="24" text-anchor="middle" fill="#f4a261" font-size="11" font-weight="700" letter-spacing="1">RADIAL LIFT</text>
+    <line x1="20" y1="32" x2="135" y2="32" stroke="#f4a26140" stroke-width="0.8"/>
+    <!-- Lift illustration: flat line bowing outward -->
+    <g transform="translate(78, 70)">
+      <line x1="-45" y1="8" x2="45" y2="8" stroke="#8b949e" stroke-width="1" stroke-dasharray="3,3"/>
+      <path d="M-45,8 Q0,-20 45,8" fill="none" stroke="#f4a261" stroke-width="2"/>
+      <circle cx="-45" cy="8" r="3" fill="#f4a261"/>
+      <circle cx="45" cy="8" r="3" fill="#f4a261"/>
+      <circle cx="0" cy="-10" r="2.5" fill="none" stroke="#f4a261" stroke-width="1.2" opacity="0.7"/>
+    </g>
+    <text x="78" y="100" text-anchor="middle" fill="#c9d1d9" font-size="10">Contracts low-chroma</text>
+    <text x="78" y="113" text-anchor="middle" fill="#8b949e" font-size="9">preserves hue + anchors</text>
+  </g>
+
+  <!-- Arrow 2→3 -->
+  <line x1="385" y1="130" x2="415" y2="130" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ═══════════ Stage 3: Geometry (pentagon = 5 seeds) ═══════════ -->
+  <g transform="translate(420, 70)">
+    <rect width="155" height="120" rx="10" fill="url(#stage3)" stroke="#457b9d" stroke-width="1.2" opacity="0.9"/>
+    <text x="78" y="24" text-anchor="middle" fill="#457b9d" font-size="11" font-weight="700" letter-spacing="1">GEOMETRY</text>
+    <line x1="20" y1="32" x2="135" y2="32" stroke="#457b9d40" stroke-width="0.8"/>
+    <!-- Convex pentagon hull from 5 seeds -->
+    <g transform="translate(78, 68)">
+      <polygon points="0,-25 24,-8 15,20 -15,20 -24,-8" fill="#457b9d15" stroke="#457b9d" stroke-width="1.5" stroke-linejoin="round"/>
+      <!-- Triangulation lines from top vertex -->
+      <line x1="0" y1="-25" x2="15" y2="20" stroke="#457b9d50" stroke-width="0.7"/>
+      <line x1="0" y1="-25" x2="-15" y2="20" stroke="#457b9d50" stroke-width="0.7"/>
+      <!-- Seed vertices -->
+      <circle cx="0" cy="-25" r="3.5" fill="#457b9d"/>
+      <circle cx="24" cy="-8" r="3.5" fill="#457b9d"/>
+      <circle cx="15" cy="20" r="3.5" fill="#457b9d"/>
+      <circle cx="-15" cy="20" r="3.5" fill="#457b9d"/>
+      <circle cx="-24" cy="-8" r="3.5" fill="#457b9d"/>
+    </g>
+    <text x="78" y="110" text-anchor="middle" fill="#c9d1d9" font-size="10">SVD + Convex hull</text>
+  </g>
+
+  <!-- Arrow 3→4 -->
+  <line x1="580" y1="130" x2="610" y2="130" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ═══════════ Stage 4: Initialize (pentagon = 5 seeds) ═══════════ -->
+  <g transform="translate(615, 70)">
+    <rect width="155" height="120" rx="10" fill="url(#stage4)" stroke="#2a9d8f" stroke-width="1.2" opacity="0.9"/>
+    <text x="78" y="24" text-anchor="middle" fill="#2a9d8f" font-size="11" font-weight="700" letter-spacing="1">INITIALIZE</text>
+    <line x1="20" y1="32" x2="135" y2="32" stroke="#2a9d8f40" stroke-width="0.8"/>
+    <!-- Pentagon with particles placed on it -->
+    <g transform="translate(78, 68)">
+      <polygon points="0,-25 24,-8 15,20 -15,20 -24,-8" fill="none" stroke="#2a9d8f40" stroke-width="1" stroke-linejoin="round"/>
+      <!-- Seeds (solid, 5 vertices) -->
+      <circle cx="0" cy="-25" r="3.5" fill="#2a9d8f"/>
+      <circle cx="24" cy="-8" r="3.5" fill="#2a9d8f"/>
+      <circle cx="15" cy="20" r="3.5" fill="#2a9d8f"/>
+      <circle cx="-15" cy="20" r="3.5" fill="#2a9d8f"/>
+      <circle cx="-24" cy="-8" r="3.5" fill="#2a9d8f"/>
+      <!-- Free particles (hollow, 5 to match optimize step) -->
+      <circle cx="12" cy="-16" r="3" fill="none" stroke="#2a9d8f" stroke-width="1.5"/>
+      <circle cx="-12" cy="-16" r="3" fill="none" stroke="#2a9d8f" stroke-width="1.5"/>
+      <circle cx="8" cy="6" r="3" fill="none" stroke="#2a9d8f" stroke-width="1.5"/>
+      <circle cx="-8" cy="6" r="3" fill="none" stroke="#2a9d8f" stroke-width="1.5"/>
+      <circle cx="0" cy="17" r="3" fill="none" stroke="#2a9d8f" stroke-width="1.5"/>
+    </g>
+    <text x="78" y="100" text-anchor="middle" fill="#c9d1d9" font-size="10">Greedy placement</text>
+    <text x="78" y="113" text-anchor="middle" fill="#8b949e" font-size="9">area-weighted on faces</text>
+  </g>
+
+  <!-- ═══════════ Arrow: Stage 4 down, then left to Stage 5 ═══════════ -->
+  <polyline points="693,195 693,225 530,225" fill="none" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ═══════════ Stage 5: Optimize (large, center) ═══════════ -->
+  <g transform="translate(130, 215)">
+    <rect width="400" height="155" rx="10" fill="url(#stage5)" stroke="#a855f7" stroke-width="1.2" opacity="0.9"/>
+    <text x="200" y="24" text-anchor="middle" fill="#a855f7" font-size="11" font-weight="700" letter-spacing="1">OPTIMIZE</text>
+    <line x1="40" y1="32" x2="360" y2="32" stroke="#a855f740" stroke-width="0.8"/>
+
+    <!-- Before (clustered) — free particles shown hollow -->
+    <g transform="translate(70, 85)">
+      <text x="0" y="-35" text-anchor="middle" fill="#8b949e" font-size="9">clustered</text>
+      <circle cx="-12" cy="-8" r="4" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.5"/>
+      <circle cx="0" cy="-15" r="4" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.5"/>
+      <circle cx="8" cy="-3" r="4" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.5"/>
+      <circle cx="-5" cy="5" r="4" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.5"/>
+      <circle cx="10" cy="10" r="4" fill="none" stroke="#a855f7" stroke-width="1.5" opacity="0.5"/>
+    </g>
+
+    <!-- Arrow: clustered → separated -->
+    <line x1="120" y1="80" x2="168" y2="80" stroke="#8b949e" stroke-width="1.2" marker-end="url(#arr)"/>
+    <text x="145" y="100" text-anchor="middle" fill="#8b949e" font-size="8">repel</text>
+
+    <!-- After (spread) — free particles shown hollow -->
+    <g transform="translate(210, 85)">
+      <text x="0" y="-35" text-anchor="middle" fill="#8b949e" font-size="9">separated</text>
+      <circle cx="-30" cy="-18" r="4" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+      <circle cx="25" cy="-20" r="4" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+      <circle cx="30" cy="15" r="4" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+      <circle cx="-28" cy="12" r="4" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+      <circle cx="0" cy="0" r="4" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+    </g>
+
+    <!-- Details -->
+    <text x="200" y="133" text-anchor="middle" fill="#c9d1d9" font-size="10">Riesz repulsion (exponent 2 → 6) + gamut penalty, constrained to hull surface</text>
+    <text x="200" y="147" text-anchor="middle" fill="#8b949e" font-size="9">annealing schedule with adaptive convergence</text>
+  </g>
+
+  <!-- ═══════════ Arrow: Optimize down to Output ═══════════ -->
+  <line x1="330" y1="375" x2="330" y2="395" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- ═══════════ Stage 6: Output ═══════════ -->
+  <g transform="translate(30, 395)">
+    <rect width="840" height="60" rx="10" fill="#21262d" stroke="#30363d" stroke-width="1"/>
+    <text x="35" y="22" fill="#e6edf3" font-size="11" font-weight="600">OUTPUT</text>
+
+    <!-- Sub-steps -->
+    <g transform="translate(110, 14)">
+      <rect width="130" height="30" rx="6" fill="#1d355715" stroke="#1d3557" stroke-width="0.8"/>
+      <text x="65" y="19" text-anchor="middle" fill="#c9d1d9" font-size="10">Inverse Lift</text>
+    </g>
+    <line x1="248" y1="29" x2="275" y2="29" stroke="#8b949e" stroke-width="1" marker-end="url(#arr)"/>
+    <g transform="translate(280, 14)">
+      <rect width="130" height="30" rx="6" fill="#2a9d8f15" stroke="#2a9d8f" stroke-width="0.8"/>
+      <text x="65" y="19" text-anchor="middle" fill="#c9d1d9" font-size="10">Gamut Clip</text>
+    </g>
+    <line x1="418" y1="29" x2="445" y2="29" stroke="#8b949e" stroke-width="1" marker-end="url(#arr)"/>
+    <g transform="translate(450, 14)">
+      <rect width="130" height="30" rx="6" fill="#e6394615" stroke="#e63946" stroke-width="0.8"/>
+      <text x="65" y="19" text-anchor="middle" fill="#c9d1d9" font-size="10">sRGB Hex</text>
+    </g>
+    <line x1="588" y1="29" x2="615" y2="29" stroke="#8b949e" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- Final palette swatches (10 colors, generated with gamma=2) -->
+    <g transform="translate(618, 10)">
+      <rect x="0" y="0" width="20" height="25" rx="3" fill="#e63946"/>
+      <rect x="22" y="0" width="20" height="25" rx="3" fill="#f4a261"/>
+      <rect x="44" y="0" width="20" height="25" rx="3" fill="#457b9d"/>
+      <rect x="66" y="0" width="20" height="25" rx="3" fill="#2a9d8f"/>
+      <rect x="88" y="0" width="20" height="25" rx="3" fill="#1d3557"/>
+      <rect x="110" y="0" width="20" height="25" rx="3" fill="#932835"/>
+      <rect x="132" y="0" width="20" height="25" rx="3" fill="#b29f5d"/>
+      <rect x="154" y="0" width="20" height="25" rx="3" fill="#bd2e3b"/>
+      <rect x="176" y="0" width="20" height="25" rx="3" fill="#00676d"/>
+      <rect x="198" y="0" width="20" height="25" rx="3" fill="#f46b59"/>
+    </g>
+    <text x="790" y="48" text-anchor="middle" fill="#8b949e" font-size="9">final palette</text>
+  </g>
+
+  <!-- ═══════════ Legend ═══════════ -->
+  <g transform="translate(30, 470)">
+    <rect width="840" height="38" rx="8" fill="#161b2280" stroke="#30363d" stroke-width="0.5"/>
+    <circle cx="20" cy="19" r="4" fill="#a855f7"/>
+    <text x="30" y="23" fill="#8b949e" font-size="9">Seed (pinned)</text>
+    <circle cx="130" cy="19" r="4" fill="none" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="140" y="23" fill="#8b949e" font-size="9">Free particle</text>
+    <line x1="240" y1="19" x2="260" y2="19" stroke="#8b949e" stroke-width="1" stroke-dasharray="3,3"/>
+    <text x="268" y="23" fill="#8b949e" font-size="9">Before lift</text>
+    <line x1="340" y1="19" x2="360" y2="19" stroke="#f4a261" stroke-width="2"/>
+    <text x="368" y="23" fill="#8b949e" font-size="9">After lift</text>
+    <text x="470" y="23" fill="#8b949e" font-size="9">All operations happen in lifted OKLab space until final output</text>
+  </g>
+</svg>
