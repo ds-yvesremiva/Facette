@@ -6,8 +6,8 @@ export function PaletteControls() {
   const vividness = useStore((s) => s.vividness);
   const setPaletteSize = useStore((s) => s.setPaletteSize);
   const setVividness = useStore((s) => s.setVividness);
-  const gamma = useStore((s) => s.gamma);
-  const setGamma = useStore((s) => s.setGamma);
+  const spread = useStore((s) => s.spread);
+  const setSpread = useStore((s) => s.setSpread);
   const isComputing = useStore((s) => s.isComputing);
   const seeds = useStore((s) => s.seeds);
   const { regenerate } = usePaletteEngine();
@@ -27,29 +27,27 @@ export function PaletteControls() {
         />
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400 w-12">{vividness === 0 ? 'Auto' : `V: ${vividness.toFixed(3)}`}</label>
+        <label className="text-xs text-gray-400 w-12" title="Controls chroma preservation. Higher = more vivid intermediates for wide-hue palettes.">V: {vividness.toFixed(1)}</label>
         <input
           type="range"
           min={0}
-          max={100}
-          value={vividness * 1000}
-          onChange={(e) => {
-            const raw = Number(e.target.value) / 1000;
-            // Snap values below 0.005 to 0 (auto mode) to avoid invalid range
-            setVividness(raw > 0 && raw < 0.005 ? 0 : raw);
-          }}
+          max={40}
+          step={1}
+          value={vividness * 10}
+          onChange={(e) => setVividness(Number(e.target.value) / 10)}
           onMouseUp={regenerate}
           className="w-24"
         />
       </div>
       <div className="flex items-center gap-2">
-        <label className="text-xs text-gray-400 w-12">{gamma === 1 ? 'γ: 1' : `γ: ${gamma.toFixed(1)}`}</label>
+        <label className="text-xs text-gray-400 w-12" title="Lightness range expansion. 1.0 = seed range only. Higher = wider lightness diversity.">S: {spread.toFixed(2)}</label>
         <input
           type="range"
-          min={10}
-          max={30}
-          value={gamma * 10}
-          onChange={(e) => setGamma(Number(e.target.value) / 10)}
+          min={100}
+          max={200}
+          step={5}
+          value={spread * 100}
+          onChange={(e) => setSpread(Number(e.target.value) / 100)}
           onMouseUp={regenerate}
           className="w-24"
         />
