@@ -86,13 +86,13 @@ Lightness L is unchanged. The chromatic plane (a, b) is radially rescaled by ρ(
 
 **Verified properties of ρ:**
 
-| Property | Value | Significance |
-|----------|-------|--------------|
-| ρ(0) | 0 | Gray maps to origin |
-| ρ(R) | R | Reference chroma is a fixed point — seeds near max chroma barely distorted |
-| ρ'(0) | 0 | All chromatic directions contract at gray (gray avoidance) |
-| ρ'(r) > 0 for r > 0 | Yes | Monotone, invertible |
-| ρ convex | Yes | Guarantees chroma preservation via Jensen's inequality |
+|Property|Value|Significance|
+|--------|-----|------------|
+|ρ(0)|0|Gray maps to origin|
+|ρ(R)|R|Reference chroma is a fixed point — seeds near max chroma barely distorted|
+|ρ'(0)|0|All chromatic directions contract at gray (gray avoidance)|
+|ρ'(r) > 0 for r > 0|Yes|Monotone, invertible|
+|ρ convex|Yes|Guarantees chroma preservation via Jensen's inequality|
 
 **Convexity proof:** f(r) is convex (f''(r) = 2r_s²/(r+r_s)³ > 0). The function x^γ is convex and increasing for γ ≥ 1. The composition of a convex increasing function with a convex function is convex. Scaling by the positive constant R/f(R)^γ preserves convexity. ✓
 
@@ -303,12 +303,12 @@ The **constrained** problem — particles on a polyhedral hull surface with face
 
 ### 6.1 Why Face Atlas
 
-| Approach | Pros | Cons | Verdict |
-|----------|------|------|---------|
-| 3D project-back | Simple | Oscillation at sharp edges | Rejected |
-| Sphere remapping | Easy projection | Jacobian issues | Rejected |
-| Log-sum-exp smoothing | Smooth everywhere | Extra parameter, approximation | Viable but complex |
-| Face atlas | Exact, no parameters, debuggable | Edge-crossing bookkeeping | **Selected** |
+|Approach|Pros|Cons|Verdict|
+|--------|----|----|-------|
+|3D project-back|Simple|Oscillation at sharp edges|Rejected|
+|Sphere remapping|Easy projection|Jacobian issues|Rejected|
+|Log-sum-exp smoothing|Smooth everywhere|Extra parameter, approximation|Viable but complex|
+|Face atlas|Exact, no parameters, debuggable|Edge-crossing bookkeeping|**Selected**|
 
 ### 6.2 Construction
 
@@ -317,12 +317,13 @@ All construction occurs in lifted space, where faces are genuinely flat.
 For each triangular face F_k with lifted-space vertices (V_0, V_1, V_2), whose area exceeds τ_face:
 
 **Local 2D basis:**
+
 - e_1 = normalize(V_1 − V_0)
 - n = normalize((V_1 − V_0) × (V_2 − V_0))
 - e_2 = n × e_1
 - Origin: V_0
 
-**Edge transition transforms:** for each edge shared by two non-degenerate faces, precompute the 2D affine transform (rotation by dihedral angle + translation). Computed once.
+**Edge transitions:** for each edge shared by two non-degenerate faces, the particle's new position is recomputed in the neighbor face by evaluating barycentric coordinates directly (clamped if overshooting). This is simpler than precomputing per-edge 2D affine transforms and numerically equivalent for the small face counts in palette problems.
 
 **Boundary edges:** particles slide along them but cannot cross.
 
@@ -378,7 +379,7 @@ Because faces are flat in lifted space, face area is computed exactly as ½|e_1 
 
 ### 8.1 Algorithm
 
-```
+```text
 Input: Hull mesh in lifted space, pinned seeds, initial particle positions,
        parameters (p_start, p_end, κ, step schedule)
 
@@ -395,7 +396,8 @@ Loop until convergence:
      compute gamut penalty gradient via finite differences in lifted space
   4. Compute force: F = −(∇E_repulsion + ∇E_gamut)
   5. Project force onto local face tangent plane → 2D displacement
-  6. Scale by current step size (annealed)
+  6. Normalize forces by maximum force magnitude, then scale by current step size (annealed).
+     This decouples step size from absolute force magnitude, which varies by orders of magnitude as p changes during continuation.
   7. Apply displacement with edge-crossing logic (Section 6.4)
   8. Update p according to continuation schedule
   9. Check convergence (see Section 8.3)
@@ -431,7 +433,7 @@ Apply T_ρ⁻¹ to all final particle positions, mapping from lifted space back 
 
 ### 9.2 Final Gamut Check
 
-Despite the gamut penalty during optimization, some positions may be marginally out of gamut. Apply Bottosson's gamut_clip_preserve_chroma: preserve hue and lightness, reduce chroma until displayable. This is typically a minimal perturbation.
+Despite the gamut penalty during optimization, some positions may be marginally out of gamut. Apply gamut clipping that preserves hue and lightness: binary search on chroma at fixed L and h to find the maximum in-gamut chroma (20 iterations, tolerance ~1e-6). This is typically a minimal perturbation.
 
 The fraction of output colors requiring clipping depends on the seed configuration. The algorithm does not guarantee all optimized positions are exactly in gamut; it guarantees that the penalty strongly discourages out-of-gamut positions and that final clipping produces valid sRGB output.
 
@@ -449,24 +451,24 @@ Transform final OKLab positions to linear RGB, apply sRGB gamma. Output is a set
 
 ## 10. Complete Parameter Summary
 
-| Parameter | Symbol | Default | Meaning |
-|-----------|--------|---------|---------|
-| Palette size | N | User-specified | Total colors including seeds |
-| Gray avoidance radius | r_s | α · median(seed chromas), clamped | Chroma below which lift is strongly nonlinear |
-| Convexity strength | γ | 1 | Chroma preservation on intermediates. γ=1 is default; γ>1 for vivid palettes |
-| Reference chroma | R | max(seed chromas) | Anchors the lift; set automatically |
-| Riesz exponent start | p_start | 2 | Initial exponent for smooth exploration |
-| Riesz exponent end | p_end | 6 | Final exponent emphasizing worst-case spacing |
-| Gamut penalty weight | κ | 0.1 | Strength of gamut boundary avoidance |
-| Initial step size | step_0 | 0.01 | Starting displacement magnitude |
-| Annealing rate | δ | 0.995 | Step size decay per iteration |
-| Convergence threshold | — | 1e-6 | Relative energy change to stop |
-| Warping scale | α | 0.4 | Fraction of median chroma for r_s |
-| r_s floor | r_{s,min} | 0.005 | Minimum r_s |
-| r_s ceiling | r_{s,max} | 0.10 | Maximum r_s |
-| Dimensionality threshold | τ_dim | 1e-4 · σ_1 | Collapse to lower dimension |
-| Face area threshold | τ_face | 1e-8 | Minimum face area |
-| Max iterations | — | 2000 | Hard cap |
+|Parameter|Symbol|Default|Meaning|
+|---------|------|-------|-------|
+|Palette size|N|User-specified|Total colors including seeds|
+|Gray avoidance radius|r_s|α · median(seed chromas), clamped|Chroma below which lift is strongly nonlinear|
+|Convexity strength|γ|1|Chroma preservation on intermediates. γ=1 is default; γ>1 for vivid palettes|
+|Reference chroma|R|max(seed chromas)|Anchors the lift; set automatically|
+|Riesz exponent start|p_start|2|Initial exponent for smooth exploration|
+|Riesz exponent end|p_end|6|Final exponent emphasizing worst-case spacing|
+|Gamut penalty weight|κ|0.1|Strength of gamut boundary avoidance|
+|Initial step size|step_0|0.01|Starting displacement magnitude|
+|Annealing rate|δ|0.995|Step size decay per iteration|
+|Convergence threshold|—|1e-6|Relative energy change to stop|
+|Warping scale|α|0.4|Fraction of median chroma for r_s|
+|r_s floor|r_{s,min}|0.005|Minimum r_s|
+|r_s ceiling|r_{s,max}|0.10|Maximum r_s|
+|Dimensionality threshold|τ_dim|1e-4 · σ_1|Collapse to lower dimension|
+|Face area threshold|τ_face|1e-8|Minimum face area|
+|Max iterations|—|2000|Hard cap|
 
 User-facing parameters: **N** (palette size), optionally **r_s** (vividness slider), optionally **γ** (chroma preservation for advanced users). All others have robust defaults.
 
@@ -506,17 +508,17 @@ User-facing parameters: **N** (palette size), optionally **r_s** (vividness slid
 
 ## 12. Recommended Validation Benchmarks
 
-| Test Case | Seeds | What It Stresses |
-|-----------|-------|-----------------|
-| Line segment | 2 vivid complementary colors | 1D repulsion, gray-crossing, chroma preservation via T_ρ⁻¹ |
-| Gray-crossing triangle | 3 seeds spanning the gray axis | Area contraction, gray avoidance, muted region |
-| One-sided hue cluster | 4–5 vivid seeds in narrow hue range | Hull shape vs. palette diversity |
-| Full hue wraparound | 4–6 seeds evenly around hue wheel | Closed hull, pure spacing |
-| Muted anchor | 1 warm gray + 4 vivid seeds | r_s robustness, interior seed handling |
-| All muted | 4 low-chroma seeds | Lift gentleness, palette stays muted |
-| Gamut stress | Deep blues + saturated cyans | Gamut penalty, clipping frequency |
-| Near-coplanar | 4 seeds with very small σ_3 | Dimensionality detection, numerical stability |
-| Wide hue vivid | 2–3 vivid seeds at 120°+ separation | Chroma preservation, γ effect |
+|Test Case|Seeds|What It Stresses|
+|--------|------|----------------|
+|Line segment|2 vivid complementary colors|1D repulsion, gray-crossing, chroma preservation via T_ρ⁻¹|
+|Gray-crossing triangle|3 seeds spanning the gray axis|Area contraction, gray avoidance, muted region|
+|One-sided hue cluster|4–5 vivid seeds in narrow hue range|Hull shape vs. palette diversity|
+|Full hue wraparound|4–6 seeds evenly around hue wheel|Closed hull, pure spacing|
+|Muted anchor|1 warm gray + 4 vivid seeds|r_s robustness, interior seed handling|
+|All muted|4 low-chroma seeds|Lift gentleness, palette stays muted|
+|Gamut stress|Deep blues + saturated cyans|Gamut penalty, clipping frequency|
+|Near-coplanar|4 seeds with very small σ_3|Dimensionality detection, numerical stability|
+|Wide hue vivid|2–3 vivid seeds at 120°+ separation|Chroma preservation, γ effect|
 
 Measure: minimum pairwise ΔE in OKLab, distribution of pairwise distances, fraction requiring final gamut clipping, and subjective family coherence.
 
@@ -526,19 +528,19 @@ Measure: minimum pairwise ΔE in OKLab, distribution of pairwise distances, frac
 
 ### 13.1 What Changed
 
-| Aspect | V4.4 | V5 |
-|--------|------|-----|
-| Hull construction | OKLab | Lifted space |
-| Atlas faces | Flat in OKLab (curved in warped space) | Flat in lifted space |
-| Repulsion energy | Warped distance with J_T pullback | Plain Euclidean |
-| Gray avoidance | Separate mechanism (warped energy) | Emergent from lift geometry |
-| Chroma preservation | Not addressed | Guaranteed by convexity of ρ |
-| Face areas for init | Approximate (subdivision needed) | Exact (flat faces) |
-| Centroids for init | Approximate | Exact |
-| Warp Jacobian | Required per particle per iteration | Eliminated |
-| Gamut penalty gradient | Analytical (complex chain rule) | Finite differences (trivially correct) |
-| γ parameter | Not present | Controls chroma preservation |
-| R parameter | Not present | Anchors lift normalization |
+|Aspect|V4.4|V5|
+|------|----|--|
+|Hull construction|OKLab|Lifted space|
+|Atlas faces|Flat in OKLab (curved in warped space)|Flat in lifted space|
+|Repulsion energy|Warped distance with J_T pullback|Plain Euclidean|
+|Gray avoidance|Separate mechanism (warped energy)|Emergent from lift geometry|
+|Chroma preservation|Not addressed|Guaranteed by convexity of ρ|
+|Face areas for init|Approximate (subdivision needed)|Exact (flat faces)|
+|Centroids for init|Approximate|Exact|
+|Warp Jacobian|Required per particle per iteration|Eliminated|
+|Gamut penalty gradient|Analytical (complex chain rule)|Finite differences (trivially correct)|
+|γ parameter|Not present|Controls chroma preservation|
+|R parameter|Not present|Anchors lift normalization|
 
 ### 13.2 What Stayed the Same
 
@@ -626,7 +628,7 @@ All issues from Rounds 1–7 remain resolved. The V5 architecture does not regre
 
 ### Component Dependency Order
 
-```
+```text
 [1] Color Conversion (sRGB → OKLab)
          ↓
 [2] Radial Lift (T_ρ: OKLab → lifted space)
@@ -652,20 +654,20 @@ All issues from Rounds 1–7 remain resolved. The V5 architecture does not regre
 
 ### Estimated Implementation Complexity
 
-| Component | Lines of Code (approx.) | Notes |
-|-----------|------------------------|-------|
-| Color conversion | 30 | Ottosson's reference |
-| Radial lift T_ρ + inverse | 30 | Forward transform, closed-form inverse |
-| Dimensionality detection | 25 | SVD + threshold logic |
-| Convex hull | Library call | QHull / SciPy / CGAL |
-| Seed classification | 30 | Barycentric tests in lifted space |
-| Face atlas + degeneracy | 100 | Basis computation, transitions, thresholds |
-| Energy function | 40 | Euclidean Riesz + gamut penalty with finite differences |
-| Initialization | 60 | Exact areas, sampled greedy placement, jitter |
-| Optimization loop | 80 | Plain Euclidean forces, edge crossing, annealing |
-| 1D specialization | 30 | Line segment repulsion |
-| Output | 25 | T_ρ⁻¹, gamut clip, sRGB conversion |
-| **Total** | **~450** | Excluding library dependencies |
+|Component|Lines of Code (approx.)|Notes|
+|---------|-----------------------|-----|
+|Color conversion|30|Ottosson's reference|
+|Radial lift T_ρ + inverse|30|Forward transform, closed-form inverse|
+|Dimensionality detection|25|SVD + threshold logic|
+|Convex hull|Library call|QHull / SciPy / CGAL|
+|Seed classification|30|Barycentric tests in lifted space|
+|Face atlas + degeneracy|100|Basis computation, transitions, thresholds|
+|Energy function|40|Euclidean Riesz + gamut penalty with finite differences|
+|Initialization|60|Exact areas, sampled greedy placement, jitter|
+|Optimization loop|80|Plain Euclidean forces, edge crossing, annealing|
+|1D specialization|30|Line segment repulsion|
+|Output|25|T_ρ⁻¹, gamut clip, sRGB conversion|
+|**Total**|**~450**|Excluding library dependencies|
 
 ---
 
