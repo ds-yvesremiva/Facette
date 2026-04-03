@@ -1,4 +1,4 @@
-import type { ForceComputer, GamutChecker, OKLab, Particle, RadialLift, Vec3 } from './types';
+import type { ForceComputer, GamutChecker, OKLab, Particle, SpaceTransform, Vec3 } from './types';
 import { oklabToLinearRgb } from './color-conversion';
 import { vec3Add, vec3Scale, vec3Sub, vec3Norm } from './math';
 
@@ -28,7 +28,7 @@ const FD_EPS = 1e-7;
  * through the inverse lift.
  */
 export function createForceComputer(
-  lift: RadialLift,
+  lift: SpaceTransform,
   gamut: GamutChecker,
 ): ForceComputer {
   return {

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { createForceComputer } from './energy';
-import { createRadialLift } from './radial-lift';
+import { createSpaceLift } from './space-lift';
 import { createGamutChecker } from './gamut-clipping';
 import type { Particle, Vec3 } from './types';
 
 describe('ForceComputer', () => {
-  const lift = createRadialLift(0.04, 0.15, 1);
+  const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
   const gamut = createGamutChecker();
   const fc = createForceComputer(lift, gamut);
 
