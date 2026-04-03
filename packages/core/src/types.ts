@@ -46,16 +46,28 @@ export function isFree(p: Particle): p is Extract<Particle, { kind: 'free' | 'fr
 
 // === Narrow Interfaces (ISP + DIP) ===
 
-export interface RadialLift {
+/** Narrow interface for consumers that only need the coordinate transform (ISP). */
+export interface SpaceTransform {
   toLifted(pos: OKLab): OKLab;
   fromLifted(pos: OKLab): OKLab;
+}
+
+/** Construction parameters — grouped for diagnostics/tracing (OCP). */
+export interface SpaceLiftConfig {
   readonly rs: number;
   readonly R: number;
   readonly gamma: number;
+  readonly spread: number;
+  readonly Lc: number;
+}
+
+/** Full interface: transform + diagnostic metadata. Only the orchestrator needs this. */
+export interface SpaceLift extends SpaceTransform {
+  readonly config: SpaceLiftConfig;
 }
 
 /**
- * ForceComputer is constructed with RadialLift and GamutChecker
+ * ForceComputer is constructed with SpaceTransform and GamutChecker
  * injected (DIP). Only per-iteration parameters (p, kappa) are
  * passed at call time since they change via annealing.
  * Returns forces AND scalar energy in one pass (shared pairwise distances).
@@ -122,16 +134,15 @@ export interface OptimizationTrace {
   frames: OptimizationFrame[];
   finalColors: string[];
   clippedIndices: number[];
-  rs: number;
-  gamma: number;
-  R: number;
+  liftConfig: SpaceLiftConfig;
+  vividness: number;
 }
 
 // === Public API Types ===
 
 export interface PaletteOptions {
-  vividness?: number;
-  gamma?: number;
+  vividness?: number;   // adaptive gamma coefficient v. Default 2. Range [0, 4].
+  spread?: number;      // lightness stretch factor. Default 1.2. Range [1, 2].
 }
 
 export interface PaletteResult {
