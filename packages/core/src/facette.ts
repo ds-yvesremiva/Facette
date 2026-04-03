@@ -11,14 +11,15 @@ import type {
   OptimizationTrace,
 } from './types';
 
-import { hexToOklab, oklabToOklch } from './color-conversion';
+import { hexToOklab } from './color-conversion';
 import { detectDimensionality } from './dimensionality';
 import { buildConvexHull } from './convex-hull';
 import { classifySeeds } from './seed-classification';
 import { buildAtlas } from './atlas';
 import { createLineConstraint } from './line-segment';
 import { createSurfaceConstraint } from './surface-navigation';
-import { createRadialLift } from './radial-lift';
+import { computeAdaptiveGamma } from './adaptive-gamma';
+import { createSpaceLift } from './space-lift';
 import { createGamutChecker } from './gamut-clipping';
 import { createForceComputer } from './energy';
 import { initializeParticles1D, initializeParticlesHull } from './initialization';
@@ -67,26 +68,22 @@ function validateInputs(
     throw new Error('Palette size must be >= number of seeds');
   }
 
-  if (options?.vividness !== undefined && options.vividness !== 0) {
-    if (options.vividness < 0.005 || options.vividness > 0.10) {
-      throw new Error('Vividness must be between 0.005 and 0.10');
+  if (options?.vividness !== undefined) {
+    if (options.vividness < 0 || options.vividness > 4) {
+      throw new Error('Vividness must be between 0 and 4');
     }
   }
 
-  if (options?.gamma !== undefined) {
-    if (options.gamma < 1) {
-      throw new Error('Gamma must be >= 1');
+  if (options?.spread !== undefined) {
+    if (options.spread < 1 || options.spread > 2) {
+      throw new Error('Spread must be between 1 and 2');
     }
   }
 }
 
 // -- r_s computation --
 
-function computeRs(chromas: number[], vividness?: number): number {
-  if (vividness !== undefined && vividness > 0) {
-    return vividness;
-  }
-
+function computeRs(chromas: number[]): number {
   const sorted = [...chromas].sort((a, b) => a - b);
   const n = sorted.length;
   const median =
@@ -110,26 +107,31 @@ export function createPaletteStepper(
   // 2. Parse seeds to OKLab
   const oklabSeeds = seeds.map(hexToOklab);
 
-  // 3. Compute lift parameters
-  const chromas = oklabSeeds.map(s => oklabToOklch(s).C);
-  const rs = computeRs(chromas, options?.vividness);
+  // 3. Compute adaptive gamma (delegated to adaptive-gamma module)
+  const v = options?.vividness ?? 2;
+  const gamma = computeAdaptiveGamma(oklabSeeds, v);
+
+  // 4. Compute lift parameters
+  const chromas = oklabSeeds.map(s => Math.sqrt(s.a * s.a + s.b * s.b));
+  const rs = computeRs(chromas);
   const R = Math.max(...chromas);
-  const gamma = options?.gamma ?? 1;
+  const spread = options?.spread ?? 1.2;
+  const Lc = oklabSeeds.reduce((sum, s) => sum + s.L, 0) / oklabSeeds.length;
 
-  // 4. Create radial lift
-  const lift = createRadialLift(rs, R, gamma);
+  // 5. Create space lift
+  const lift = createSpaceLift({ rs, R, gamma, spread, Lc });
 
-  // 5. Lift seeds to lifted space
-  const liftedSeeds = oklabSeeds.map(s => lift.toLifted(s));
+  // 6. Transform seeds to working space
+  const workingSeeds = oklabSeeds.map(s => lift.toLifted(s));
 
-  // 6. Detect dimensionality in lifted space
-  const dimResult = detectDimensionality(liftedSeeds);
+  // 7. Detect dimensionality in working space
+  const dimResult = detectDimensionality(workingSeeds);
 
   if (dimResult.dimension === 0) {
     throw new Error('Seeds must be distinct');
   }
 
-  // 7. Wire up shared services
+  // 8. Wire up shared services
   const gamut = createGamutChecker();
   const forces = createForceComputer(lift, gamut);
   const schedule = createAnnealingSchedule();
@@ -146,51 +148,49 @@ export function createPaletteStepper(
     let minIdx = 0, maxIdx = 0;
 
     let meanL = 0, meanA = 0, meanB = 0;
-    for (const s of liftedSeeds) {
+    for (const s of workingSeeds) {
       meanL += s.L; meanA += s.a; meanB += s.b;
     }
-    meanL /= liftedSeeds.length;
-    meanA /= liftedSeeds.length;
-    meanB /= liftedSeeds.length;
+    meanL /= workingSeeds.length;
+    meanA /= workingSeeds.length;
+    meanB /= workingSeeds.length;
 
-    for (let i = 0; i < liftedSeeds.length; i++) {
-      const s = liftedSeeds[i];
+    for (let i = 0; i < workingSeeds.length; i++) {
+      const s = workingSeeds[i];
       const proj = (s.L - meanL) * axis[0] + (s.a - meanA) * axis[1] + (s.b - meanB) * axis[2];
       if (proj < minProj) { minProj = proj; minIdx = i; }
       if (proj > maxProj) { maxProj = proj; maxIdx = i; }
     }
 
-    const liftedLine: LineGeometry = {
+    const workingLine: LineGeometry = {
       kind: 'line',
-      start: liftedSeeds[minIdx],
-      end: liftedSeeds[maxIdx],
+      start: workingSeeds[minIdx],
+      end: workingSeeds[maxIdx],
     };
 
-    classifiedSeeds = classifySeeds(liftedSeeds, liftedLine);
-    constraint = createLineConstraint(liftedLine.start, liftedLine.end);
-    particles = initializeParticles1D(classifiedSeeds, liftedLine, size);
+    classifiedSeeds = classifySeeds(workingSeeds, workingLine);
+    constraint = createLineConstraint(workingLine.start, workingLine.end);
+    particles = initializeParticles1D(classifiedSeeds, workingLine, size);
 
-    // Display geometry: inverse-map to OKLab
     displayGeometry = {
       kind: 'line',
-      start: lift.fromLifted(liftedLine.start),
-      end: lift.fromLifted(liftedLine.end),
+      start: lift.fromLifted(workingLine.start),
+      end: lift.fromLifted(workingLine.end),
     };
   } else {
     // -- 2D/3D pipeline --
-    const liftedHull = buildConvexHull(liftedSeeds);
-    const atlas = buildAtlas(liftedHull);
+    const workingHull = buildConvexHull(workingSeeds);
+    const atlas = buildAtlas(workingHull);
 
-    classifiedSeeds = classifySeeds(liftedSeeds, liftedHull);
-    constraint = createSurfaceConstraint(atlas, liftedHull);
-    particles = initializeParticlesHull(classifiedSeeds, liftedHull, atlas, size);
+    classifiedSeeds = classifySeeds(workingSeeds, workingHull);
+    constraint = createSurfaceConstraint(atlas, workingHull);
+    particles = initializeParticlesHull(classifiedSeeds, workingHull, atlas, size);
 
-    // Display geometry: inverse-map hull vertices to OKLab
     displayGeometry = {
       kind: 'hull',
-      vertices: liftedHull.vertices.map(v => lift.fromLifted(v)),
-      faces: liftedHull.faces,
-      adjacency: liftedHull.adjacency,
+      vertices: workingHull.vertices.map(v => lift.fromLifted(v)),
+      faces: workingHull.faces,
+      adjacency: workingHull.adjacency,
     };
   }
 
@@ -200,7 +200,7 @@ export function createPaletteStepper(
     position: oklabSeeds[i],
   })) as Particle[];
 
-  // 8. Create stepper
+  // 9. Create stepper
   const stepper = createOptimizationStepper(
     particles, forces, constraint, lift.fromLifted, schedule,
   );
@@ -227,9 +227,8 @@ export function createPaletteStepper(
         frames: allFrames,
         finalColors: colors,
         clippedIndices,
-        rs,
-        gamma,
-        R,
+        liftConfig: lift.config,
+        vividness: v,
       };
     },
   };
