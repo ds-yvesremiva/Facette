@@ -36,7 +36,13 @@ export type Particle =
   | { kind: 'pinned-interior'; position: OKLab }
   | { kind: 'free';            position: OKLab; faceIndex: number; bary: Barycentric }
   | { kind: 'pinned-endpoint'; position: OKLab; t: number }
+  | { kind: 'pinned-1d';       position: OKLab; t: number }
   | { kind: 'free-1d';         position: OKLab; t: number };
+
+/** Type guard: is this particle free to move? Centralises the check (Open/Closed). */
+export function isFree(p: Particle): p is Extract<Particle, { kind: 'free' | 'free-1d' }> {
+  return p.kind === 'free' || p.kind === 'free-1d';
+}
 
 // === Narrow Interfaces (ISP + DIP) ===
 

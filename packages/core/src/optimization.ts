@@ -1,11 +1,12 @@
-import type {
-  AnnealingSchedule,
-  ForceComputer,
-  MotionConstraint,
-  OKLab,
-  OptimizationFrame,
-  Particle,
-  Vec3,
+import {
+  isFree,
+  type AnnealingSchedule,
+  type ForceComputer,
+  type MotionConstraint,
+  type OKLab,
+  type OptimizationFrame,
+  type Particle,
+  type Vec3,
 } from './types';
 import { vec3Scale, vec3Norm } from './math';
 
@@ -38,10 +39,6 @@ function cloneParticles(particles: Particle[]): Particle[] {
   })) as Particle[];
 }
 
-/** Check whether a particle is free (movable). */
-function isFree(p: Particle): boolean {
-  return p.kind === 'free' || p.kind === 'free-1d';
-}
 
 export interface AnnealingScheduleOptions {
   step0?: number;
@@ -97,9 +94,9 @@ export function createAnnealingSchedule(options?: AnnealingScheduleOptions): Ann
       if (iteration < rampEnd) {
         return maxDisplacement < 1e-6;
       }
-      // After p ramp, check relative energy change
-      if (Math.abs(prevEnergy) < 1e-30) return false;
-      return Math.abs((energy - prevEnergy) / prevEnergy) < 1e-6;
+      // After p ramp, check relative energy change OR max displacement
+      if (Math.abs(prevEnergy) < 1e-30) return maxDisplacement < 1e-6;
+      return Math.abs((energy - prevEnergy) / prevEnergy) < 1e-6 || maxDisplacement < 1e-6;
     },
   };
 }

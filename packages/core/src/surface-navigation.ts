@@ -1,11 +1,12 @@
-import type {
-  AtlasQuery,
-  HullGeometry,
-  MotionConstraint,
-  OKLab,
-  Particle,
-  Vec3,
-  EdgeKey,
+import {
+  isFree,
+  type AtlasQuery,
+  type HullGeometry,
+  type MotionConstraint,
+  type OKLab,
+  type Particle,
+  type Vec3,
+  type EdgeKey,
 } from './types';
 import { vec3Add, vec3Scale, vec3Dot } from './math';
 import { computeBarycentric, interpolate, isValid, clampAndRenormalize } from './barycentric';
@@ -34,7 +35,7 @@ export function createSurfaceConstraint(
     // ── projectToTangent ────────────────────────────────────────────────────
     projectToTangent(force: Vec3, particle: Particle): Vec3 {
       // Pinned particles receive no force
-      if (particle.kind !== 'free') {
+      if (!isFree(particle)) {
         return [0, 0, 0];
       }
 
@@ -54,7 +55,7 @@ export function createSurfaceConstraint(
     // ── applyDisplacement ───────────────────────────────────────────────────
     applyDisplacement(particle: Particle, displacement: Vec3): Particle {
       // Only free particles can move
-      if (particle.kind !== 'free') {
+      if (!isFree(particle)) {
         return particle;
       }
 

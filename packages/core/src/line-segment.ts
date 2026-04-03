@@ -1,4 +1,4 @@
-import type { OKLab, Vec3, Particle, MotionConstraint } from './types';
+import { isFree, type OKLab, type Vec3, type Particle, type MotionConstraint } from './types';
 import { vec3Sub, vec3Dot, vec3Scale, vec3Normalize, vec3Norm } from './math';
 
 function oklabToVec3(c: OKLab): Vec3 {
@@ -12,12 +12,7 @@ export function createLineConstraint(start: OKLab, end: OKLab): MotionConstraint
 
   return {
     projectToTangent(force: Vec3, particle: Particle): Vec3 {
-      if (
-        particle.kind === 'pinned-endpoint' ||
-        particle.kind === 'pinned-vertex' ||
-        particle.kind === 'pinned-boundary' ||
-        particle.kind === 'pinned-interior'
-      ) {
+      if (!isFree(particle)) {
         return [0, 0, 0];
       }
       // Project force onto d: (d · force) * d
@@ -26,12 +21,7 @@ export function createLineConstraint(start: OKLab, end: OKLab): MotionConstraint
     },
 
     applyDisplacement(particle: Particle, displacement: Vec3): Particle {
-      if (
-        particle.kind === 'pinned-endpoint' ||
-        particle.kind === 'pinned-vertex' ||
-        particle.kind === 'pinned-boundary' ||
-        particle.kind === 'pinned-interior'
-      ) {
+      if (!isFree(particle)) {
         return particle;
       }
 
