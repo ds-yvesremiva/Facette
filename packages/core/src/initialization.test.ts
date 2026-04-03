@@ -34,6 +34,50 @@ describe('initialization', () => {
       expect(pinned.length).toBe(2);
     });
 
+    it('applies gray jitter to free-1d particles near zero chroma', () => {
+      // Gray-axis segment: all positions have zero chroma
+      const grayLine: LineGeometry = {
+        kind: 'line',
+        start: { L: 0.2, a: 0, b: 0 },
+        end: { L: 0.8, a: 0, b: 0 },
+      };
+      const seeds: Particle[] = [
+        { kind: 'pinned-endpoint', position: grayLine.start, t: 0 },
+        { kind: 'pinned-endpoint', position: grayLine.end, t: 1 },
+      ];
+      const particles = initializeParticles1D(seeds, grayLine, 5);
+      const free = particles.filter(p => p.kind === 'free-1d');
+      expect(free.length).toBe(3);
+
+      // Un-jittered slots would be at t = 0.25, 0.5, 0.75
+      const expectedSlots = [0.25, 0.5, 0.75];
+      const ts = free.map(p => (p as Extract<Particle, { kind: 'free-1d' }>).t).sort((a, b) => a - b);
+      for (let i = 0; i < ts.length; i++) {
+        expect(Math.abs(ts[i] - expectedSlots[i])).toBeCloseTo(1e-5, 7);
+      }
+    });
+
+    it('does not jitter free-1d particles with non-zero chroma', () => {
+      // Segment with non-zero chroma at all points
+      const huedLine: LineGeometry = {
+        kind: 'line',
+        start: { L: 0.3, a: 0.1, b: 0 },
+        end: { L: 0.7, a: 0.1, b: 0 },
+      };
+      const seeds: Particle[] = [
+        { kind: 'pinned-endpoint', position: huedLine.start, t: 0 },
+        { kind: 'pinned-endpoint', position: huedLine.end, t: 1 },
+      ];
+      const particles = initializeParticles1D(seeds, huedLine, 4);
+      const free = particles.filter(p => p.kind === 'free-1d');
+      const ts = free.map(p => (p as Extract<Particle, { kind: 'free-1d' }>).t).sort((a, b) => a - b);
+      // Should be at exact slot positions (no jitter)
+      const expectedSlots = [1/3, 2/3];
+      for (let i = 0; i < ts.length; i++) {
+        expect(ts[i]).toBeCloseTo(expectedSlots[i], 6);
+      }
+    });
+
     it('free particles are evenly spaced', () => {
       const seeds: Particle[] = [
         { kind: 'pinned-endpoint', position: line.start, t: 0 },

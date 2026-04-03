@@ -98,7 +98,7 @@ export function initializeParticles1D(
   // Collect seed t values
   const seedTs = new Set<number>();
   for (const s of seeds) {
-    if (s.kind === 'pinned-endpoint' || s.kind === 'free-1d') {
+    if (s.kind === 'pinned-endpoint' || s.kind === 'pinned-1d' || s.kind === 'free-1d') {
       seedTs.add(s.t);
     }
   }
@@ -121,6 +121,28 @@ export function initializeParticles1D(
       b: line.start.b + slotT * (line.end.b - line.start.b),
     };
     result.push({ kind: 'free-1d', position, t: slotT });
+  }
+
+  // --- Gray jitter pass for 1D (spec Section 4.5) ---
+  // For free-1d particles at near-zero chroma, perturb t by ±1e-5.
+  for (let i = seeds.length; i < result.length; i++) {
+    const p = result[i];
+    if (p.kind !== 'free-1d') continue;
+
+    const chroma = Math.sqrt(p.position.a * p.position.a + p.position.b * p.position.b);
+    if (chroma >= 1e-6) continue;
+
+    const freeIndex = i - seeds.length;
+    const sign = freeIndex % 2 === 0 ? 1 : -1;
+    const newT = Math.min(1, Math.max(0, p.t + sign * 1e-5));
+
+    const position: OKLab = {
+      L: line.start.L + newT * (line.end.L - line.start.L),
+      a: line.start.a + newT * (line.end.a - line.start.a),
+      b: line.start.b + newT * (line.end.b - line.start.b),
+    };
+
+    result[i] = { kind: 'free-1d', position, t: newT };
   }
 
   return result;
