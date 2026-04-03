@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createOptimizationStepper, createAnnealingSchedule, pairwiseMinDeltaE } from './optimization';
 import { createForceComputer } from './energy';
-import { createRadialLift } from './radial-lift';
+import { createSpaceLift } from './space-lift';
 import { createGamutChecker } from './gamut-clipping';
 import { createLineConstraint } from './line-segment';
 import type { Particle, OKLab } from './types';
@@ -64,7 +64,7 @@ describe('createAnnealingSchedule', () => {
 
 describe('createOptimizationStepper', () => {
   it('yields frames with correct structure', () => {
-    const lift = createRadialLift(0.04, 0.15, 1);
+    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
     const gamut = createGamutChecker();
     const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
@@ -88,7 +88,7 @@ describe('createOptimizationStepper', () => {
   });
 
   it('pinned particles do not move', () => {
-    const lift = createRadialLift(0.04, 0.15, 1);
+    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
     const gamut = createGamutChecker();
     const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
@@ -112,7 +112,7 @@ describe('createOptimizationStepper', () => {
   });
 
   it('final energy is lower than initial energy', () => {
-    const lift = createRadialLift(0.04, 0.15, 1);
+    const lift = createSpaceLift({ rs: 0.04, R: 0.15, gamma: 1, spread: 1, Lc: 0.5 });
     const gamut = createGamutChecker();
     const forces = createForceComputer(lift, gamut);
     const line = { kind: 'line' as const, start: { L: 0.2, a: 0.1, b: 0 }, end: { L: 0.8, a: -0.1, b: 0 } };
