@@ -94,7 +94,8 @@ function classifyLine(seed: OKLab, geometry: LineGeometry): Particle {
   if (Math.abs(t) < EPSILON) t = 0;
   else if (Math.abs(t - 1) < EPSILON) t = 1;
 
-  return { kind: 'pinned-endpoint', position: seed, t };
+  const kind = (t === 0 || t === 1) ? 'pinned-endpoint' : 'pinned-1d';
+  return { kind, position: seed, t };
 }
 
 /**
