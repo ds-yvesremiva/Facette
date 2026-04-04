@@ -132,7 +132,7 @@ Same parameters as `generatePalette`. Returns a `PaletteStepper`:
 ## How the algorithm works (brief)
 
 1. **Parse seeds** — convert hex to OKLab
-2. **Space lift** — apply the unified space lift that combines a convex radial transform `ρ(r) = R × (f(r)/f(R))^γ` (contracts low-chroma region, preserves hue, anchors max-chroma seeds) with an affine L-stretch (expands lightness range around seed centroid). γ is computed adaptively from seed hue spread via the `vividness` parameter.
+2. **L-stretch + Space lift** — expand seed lightness values around their centroid (controlled by `spread`), then apply the radial lift `ρ(r) = R × (f(r)/f(R))^γ` which contracts the low-chroma region, preserves hue, and anchors max-chroma seeds. γ is computed adaptively from seed hue spread via the `vividness` parameter.
 3. **Detect dimensionality** — SVD on lifted seeds determines if they are collinear (1D), coplanar (2D), or full 3D
 4. **Build geometry** — convex hull (2D/3D) or line segment (1D) from lifted seeds. Faces are flat in lifted space, so areas are exact.
 5. **Initialize particles** — greedy placement weighted by exact face area in lifted space
@@ -153,7 +153,7 @@ Facette is built as a modular pipeline where each stage has a single, well-defin
 
 **1. Input** — Your hex colors (e.g. `#e63946`) are parsed into [OKLab](https://bottosson.github.io/posts/oklab/), a perceptually uniform color space where equal distances correspond to equal visual differences. This is the foundation that makes "visually distinct" a measurable quantity.
 
-**2. Space Lift** — OKLab is great, but it has a problem: the center of the space (low chroma) is where all the muddy, washed-out grays live. The space lift applies two transforms: a nonlinear radial stretch that pushes the low-chroma region inward, and an affine lightness stretch that expands the hull in the lightness dimension. The radial transform is carefully designed so your original seed colors stay exactly where they are — only the space between them changes. The convexity strength γ adapts automatically to your seeds' hue configuration: narrow-hue palettes get gentle treatment (γ ≈ 1), while wide-hue palettes get aggressive chroma preservation (γ up to 3). The `vividness` parameter controls this sensitivity, and `spread` controls lightness expansion.
+**2. Space Lift & L-Stretch** — OKLab is great, but it has a problem: the center of the space (low chroma) is where all the muddy, washed-out grays live. The space lift applies a nonlinear radial stretch that pushes the low-chroma region inward. The radial transform is carefully designed so your original seed colors stay exactly where they are — only the space between them changes. The convexity strength γ adapts automatically to your seeds' hue configuration: narrow-hue palettes get gentle treatment (γ ≈ 1), while wide-hue palettes get aggressive chroma preservation (γ up to 3). The `vividness` parameter controls this sensitivity. Separately, the `spread` parameter expands seed lightness values before hull construction, giving new colors room to extend beyond the seed lightness range.
 
 **3. Geometry** — Now that we're in lifted space, the algorithm figures out the shape your seeds define. Two seeds define a line. Three or more seeds that happen to lie in a plane define a flat polygon. Otherwise, they define a 3D volume. In each case, Facette computes the [convex hull](https://en.wikipedia.org/wiki/Convex_hull) — the smallest shape that encloses all seeds. This hull becomes the surface that new colors are constrained to, which guarantees they stay within the chromatic family of your seeds.
 
@@ -180,7 +180,7 @@ The codebase follows a strict separation of concerns — each file owns exactly 
 | `facette.ts` | Orchestrator — wires everything together, validates input, computes parameters |
 | `color-conversion.ts` | sRGB / OKLab / OKLCh transforms (Ottosson matrices) |
 | `adaptive-gamma.ts` | Pure function: computes adaptive γ from seed hue spread and vividness |
-| `space-lift.ts` | Unified OKLab ↔ working-space transform: radial chroma lift + affine L-stretch, with exact inverse |
+| `space-lift.ts` | Radial chroma lift with exact closed-form inverse (L-stretch is seed preprocessing in facette.ts) |
 | `dimensionality.ts` | SVD-based detection of whether seeds span 1D, 2D, or 3D |
 | `convex-hull.ts` | Builds the constraint surface (line, 2D polygon, or 3D hull) |
 | `atlas.ts` | Lazy-cached index of face bases, areas, and adjacency topology |

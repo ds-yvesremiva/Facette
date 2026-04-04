@@ -111,7 +111,7 @@ Same parameters as `generatePalette`. Returns a `PaletteStepper`:
 
 Facette treats palette generation as a physics simulation in a radially lifted OKLab color space:
 
-1. **Space lift** — a unified transform that combines a convex radial chroma lift (contracts low-chroma region, anchors vivid seeds) with an affine lightness stretch (expands L range around seed centroid). γ adapts automatically to seed hue spread.
+1. **L-stretch + Radial lift** — seed lightness values are expanded around their centroid (controlled by `spread`), then a convex radial chroma lift contracts the low-chroma region and anchors vivid seeds. γ adapts automatically to seed hue spread.
 2. **Convex hull** — the hull of lifted seeds defines the palette's chromatic family
 3. **Particle repulsion** — free particles on the hull surface repel each other via Riesz energy until they reach maximum separation
 4. **Inverse lift** — final positions are mapped back to OKLab and clipped to sRGB
