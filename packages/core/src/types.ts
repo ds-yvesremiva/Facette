@@ -75,6 +75,7 @@ export interface ForceComputer {
     particles: readonly Particle[],
     p: number,
     kappa: number,
+    beta: number,
   ): { forces: Vec3[]; energy: number };
 }
 
@@ -106,6 +107,7 @@ export interface AnnealingSchedule {
   getStepSize(iteration: number): number;
   getRieszExponent(iteration: number): number;
   getGamutPenaltyWeight(iteration: number): number;
+  getMetricBlend(iteration: number): number;
   isConverged(
     iteration: number,
     energy: number,
