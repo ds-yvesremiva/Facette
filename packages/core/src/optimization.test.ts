@@ -60,6 +60,22 @@ describe('createAnnealingSchedule', () => {
     const s = createAnnealingSchedule({ rampIterations: 10 });
     expect(s.isConverged(15, 100.0, 110.0, 0.5)).toBe(false);
   });
+
+  it('metric blend ramps from 0 to 1 over ramp iterations', () => {
+    const s = createAnnealingSchedule({ rampIterations: 100 });
+    expect(s.getMetricBlend(0)).toBe(0);
+    expect(s.getMetricBlend(50)).toBeCloseTo(0.5, 4);
+    expect(s.getMetricBlend(100)).toBe(1);
+    expect(s.getMetricBlend(200)).toBe(1);
+  });
+
+  it('metric blend respects independent metricBlendEnd', () => {
+    const s = createAnnealingSchedule({ rampIterations: 100, metricBlendEnd: 50 });
+    expect(s.getMetricBlend(0)).toBe(0);
+    expect(s.getMetricBlend(25)).toBeCloseTo(0.5, 4);
+    expect(s.getMetricBlend(50)).toBe(1);
+    expect(s.getMetricBlend(100)).toBe(1);
+  });
 });
 
 describe('createOptimizationStepper', () => {

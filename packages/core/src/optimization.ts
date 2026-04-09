@@ -49,6 +49,8 @@ export interface AnnealingScheduleOptions {
   maxIterations?: number;
   /** Number of iterations over which p ramps from pStart to pEnd. Defaults to 1000. */
   rampIterations?: number;
+  /** Number of iterations over which β ramps from 0 to 1. Defaults to rampIterations. */
+  metricBlendEnd?: number;
 }
 
 /**
@@ -69,6 +71,7 @@ export function createAnnealingSchedule(options?: AnnealingScheduleOptions): Ann
   const kappa = options?.kappa ?? 0.1;
   const maxIterations = options?.maxIterations ?? 2000;
   const rampEnd = options?.rampIterations ?? 1000;
+  const blendEnd = options?.metricBlendEnd ?? rampEnd;
 
   return {
     getStepSize(iteration: number): number {
@@ -82,6 +85,11 @@ export function createAnnealingSchedule(options?: AnnealingScheduleOptions): Ann
 
     getGamutPenaltyWeight(_iteration: number): number {
       return kappa;
+    },
+
+    getMetricBlend(iteration: number): number {
+      if (iteration >= blendEnd) return 1;
+      return iteration / blendEnd;
     },
 
     isConverged(
