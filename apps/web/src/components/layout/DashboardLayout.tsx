@@ -8,9 +8,11 @@ import { PointInfoPanel } from '../info/PointInfoPanel';
 import { EnergyGraph } from '../info/EnergyGraph';
 import { PaletteStrip } from '../palette/PaletteStrip';
 import { useSyncedCamera } from '../../hooks/useSyncedCamera';
+import { useClippingInterlock } from '../../hooks/useClippingInterlock';
 
 export function DashboardLayout() {
   const { leftRef, rightRef } = useSyncedCamera();
+  useClippingInterlock();
 
   return (
     <div className="h-screen grid grid-rows-[auto_1fr_auto] gap-1 p-2 bg-gray-950">
