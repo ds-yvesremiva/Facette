@@ -17,13 +17,19 @@ export function useMorphInterpolation(): {
   const trace = useStore((s) => s.trace);
   const currentFrame = useStore((s) => s.currentFrame);
   const morphT = useStore((s) => s.morphT);
+  const showClipping = useStore((s) => s.showClipping);
 
   return useMemo(() => {
     if (!trace || currentFrame >= trace.frames.length) return null;
     const frame = trace.frames[currentFrame];
+
+    if (showClipping && morphT === 0) {
+      return { particles: frame.particles, interpolatedPositions: trace.clippedPositions };
+    }
+
     const interpolated = frame.particles.map((p, i) =>
       lerpOKLab(frame.oklabPositions[i], p.position, morphT)
     );
     return { particles: frame.particles, interpolatedPositions: interpolated };
-  }, [trace, currentFrame, morphT]);
+  }, [trace, currentFrame, morphT, showClipping]);
 }
