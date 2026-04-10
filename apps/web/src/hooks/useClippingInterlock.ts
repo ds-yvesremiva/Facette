@@ -7,6 +7,7 @@ export function useClippingInterlock(): void {
   const morphT = useStore((s) => s.morphT);
   const trace = useStore((s) => s.trace);
   const prevShowClipping = useRef(showClipping);
+  const prevTrace = useRef(trace);
 
   const lastFrame = trace ? trace.frames.length - 1 : 0;
 
@@ -21,12 +22,26 @@ export function useClippingInterlock(): void {
     prevShowClipping.current = showClipping;
   }, [showClipping, lastFrame]);
 
-  // When frame moves away from last: disable clipping
+  // When trace changes or frame moves away from last: handle clipping state
   useEffect(() => {
-    if (showClipping && currentFrame !== lastFrame) {
+    if (!showClipping) {
+      prevTrace.current = trace;
+      return;
+    }
+
+    // New trace arrived (regeneration) — jump to its last frame
+    if (trace !== prevTrace.current && trace) {
+      prevTrace.current = trace;
+      useStore.getState().setCurrentFrame(trace.frames.length - 1);
+      return;
+    }
+    prevTrace.current = trace;
+
+    // User scrubbed to a different frame — disable clipping
+    if (currentFrame !== lastFrame) {
       useStore.setState({ showClipping: false });
     }
-  }, [currentFrame, showClipping, lastFrame]);
+  }, [currentFrame, showClipping, lastFrame, trace]);
 
   // When morphT leaves 0: disable clipping
   useEffect(() => {

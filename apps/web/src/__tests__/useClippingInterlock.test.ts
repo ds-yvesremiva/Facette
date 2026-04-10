@@ -70,4 +70,17 @@ describe('useClippingInterlock', () => {
     act(() => useStore.getState().setCurrentFrame(4));
     expect(useStore.getState().showClipping).toBe(true);
   });
+
+  it('jumps to last frame of new trace when trace changes while clipping is active', () => {
+    useStore.setState({ currentFrame: 4, showClipping: true });
+    renderHook(() => useClippingInterlock());
+    // Simulate regeneration: new trace + currentFrame reset to 0
+    const newTrace = makeTrace(8);
+    act(() => {
+      useStore.setState({ trace: newTrace, currentFrame: 0 });
+    });
+    // Should jump to last frame of new trace, not disable clipping
+    expect(useStore.getState().showClipping).toBe(true);
+    expect(useStore.getState().currentFrame).toBe(7);
+  });
 });
