@@ -30,6 +30,14 @@ export function PointInfoPanel() {
   const lch = oklabToOklch(oklab);
   const hex = oklabToHex(oklab);
 
+  // Clipped data is only available on the last frame
+  const isLastFrame = currentFrame === trace.frames.length - 1;
+  const hasClippedData = isLastFrame && trace.clippedPositions.length > selectedIndex;
+  const isClipped = hasClippedData && trace.clippedIndices.includes(selectedIndex);
+  const clippedOklab = hasClippedData ? trace.clippedPositions[selectedIndex] : null;
+  const clippedLch = clippedOklab ? oklabToOklch(clippedOklab) : null;
+  const clippedHex = clippedOklab ? oklabToHex(clippedOklab) : null;
+
   return (
     <div className="w-64 text-xs font-mono space-y-1 p-2">
       <div className="flex items-center gap-2">
@@ -44,6 +52,23 @@ export function PointInfoPanel() {
         <div>RGB: {formatRGB(hex)}</div>
         <div className="text-gray-500 mt-1">γ: {trace.liftConfig.gamma.toFixed(2)} · s: {trace.spread.toFixed(2)}</div>
       </div>
+      {hasClippedData && (
+        <div className="border-t border-gray-700 pt-1 mt-1">
+          {isClipped ? (
+            <div className="text-gray-400">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded border border-gray-600" style={{ backgroundColor: clippedHex! }} />
+                <span className="text-yellow-400 text-[10px]">Clipped</span>
+              </div>
+              <div>OKLab: {formatOKLab(clippedOklab!)}</div>
+              <div>OKLCh: {formatOKLCh(clippedLch!)}</div>
+              <div>RGB: {formatRGB(clippedHex!)}</div>
+            </div>
+          ) : (
+            <span className="text-green-400 text-[10px]">In gamut</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
