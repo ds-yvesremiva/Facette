@@ -16,6 +16,14 @@ export function PointInfoPanel() {
   }
 
   const frame = trace.frames[currentFrame];
+  if (selectedIndex >= frame.particles.length || selectedIndex >= frame.oklabPositions.length) {
+    return (
+      <div className="w-64 text-xs text-gray-500 p-2">
+        Click a point to inspect it
+      </div>
+    );
+  }
+
   const particle = frame.particles[selectedIndex];
   const oklab = frame.oklabPositions[selectedIndex];
   const pos = particle.position;

@@ -71,9 +71,12 @@ describe('playbackSlice', () => {
   });
 
   it('stepForward increments frame', () => {
+    useStore.setState({
+      trace: { frames: [{}, {}, {}] } as never,
+    });
     useStore.getState().setCurrentFrame(5);
     useStore.getState().stepForward();
-    expect(useStore.getState().currentFrame).toBe(6);
+    expect(useStore.getState().currentFrame).toBe(2);
   });
 
   it('stepBackward does not go below 0', () => {

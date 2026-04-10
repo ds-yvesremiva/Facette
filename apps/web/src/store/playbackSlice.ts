@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import type { OptimizationTrace } from 'facette';
 
 export interface PlaybackSlice {
   currentFrame: number;
@@ -13,7 +14,9 @@ export interface PlaybackSlice {
   stepBackward: () => void;
 }
 
-export const createPlaybackSlice: StateCreator<PlaybackSlice, [], [], PlaybackSlice> = (set) => ({
+type PlaybackState = PlaybackSlice & { trace: OptimizationTrace | null };
+
+export const createPlaybackSlice: StateCreator<PlaybackState, [], [], PlaybackSlice> = (set, get) => ({
   currentFrame: 0,
   isPlaying: false,
   speed: 30,
@@ -22,6 +25,9 @@ export const createPlaybackSlice: StateCreator<PlaybackSlice, [], [], PlaybackSl
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   togglePlayback: () => set((s) => ({ isPlaying: !s.isPlaying })),
   setSpeed: (speed) => set({ speed }),
-  stepForward: () => set((s) => ({ currentFrame: s.currentFrame + 1 })),
+  stepForward: () => set((s) => {
+    const maxFrame = Math.max(0, (get().trace?.frames.length ?? 1) - 1);
+    return { currentFrame: Math.min(maxFrame, s.currentFrame + 1) };
+  }),
   stepBackward: () => set((s) => ({ currentFrame: Math.max(0, s.currentFrame - 1) })),
 });
