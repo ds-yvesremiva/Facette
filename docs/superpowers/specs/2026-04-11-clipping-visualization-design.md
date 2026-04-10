@@ -34,31 +34,35 @@ Add `clippedPositions: OKLab[]` to `OptimizationTrace`.
 
 Destructure `clippedPositions` from `finalizeColors()` and include it in the trace object.
 
-### 2. Store: `showClipping` toggle with frame/morph interlocks
+### 2. Store: Pure `showClipping` toggle
 
 **File:** `apps/web/src/store/viewerSlice.ts`
 
 Add to `ViewerSlice`:
 - `showClipping: boolean` (default `false`)
-- `toggleClipping: () => void`
+- `toggleClipping: () => void` — pure boolean flip, no side effects. The store holds state; it does not coordinate across slices.
 
-`toggleClipping` logic:
-- If turning **on**: set `showClipping: true`, jump `currentFrame` to last frame (via `setCurrentFrame`), and if `morphT > 0`, animate to unlifted first (set `morphT: 0`).
-- If turning **off**: set `showClipping: false`.
+### 3. Hook: `useClippingInterlock` — cross-slice coordination
 
-**Auto-disable interlocks** (reactive, in the store or via effects):
-- When `currentFrame` changes to anything other than the last frame → set `showClipping: false`.
-- When `morphT` leaves 0 (user toggles lift) → set `showClipping: false`.
+**File:** `apps/web/src/hooks/useClippingInterlock.ts`
 
-### 3. Viewer: Position substitution when clipping is active
+A React hook that owns all interlock logic between `showClipping`, `currentFrame`, and `morphT`. This keeps store slices independent (SRP) and avoids viewerSlice reaching into playbackSlice (LoD).
 
-**File:** `apps/web/src/components/viewers/OKLabViewer.tsx`
+Behavior:
 
-When `showClipping` is true, pass `trace.clippedPositions` to `ParticlePoints` as the `positions` prop instead of the morph-interpolated positions. Since clipping forces unlifted mode and last frame, this is simply `trace.clippedPositions`.
+- **On showClipping turning on**: jump `currentFrame` to last frame, set `morphT` to 0 if lifted.
+- **On currentFrame changing** away from last frame while `showClipping` is true: set `showClipping` to false.
+- **On morphT leaving 0** while `showClipping` is true: set `showClipping` to false.
 
-The OKLCh viewer follows the same pattern.
+Mounted once in the app (or in the viewer layout). Uses `useEffect` reacting to store values via selectors.
 
-### 4. Visual distinction for clipped points
+### 4. Hook: Extend `useMorphInterpolation` for clipping positions
+
+**File:** `apps/web/src/hooks/useMorphInterpolation.ts`
+
+When `showClipping` is true (and on last frame, unlifted), return `trace.clippedPositions` instead of interpolated positions. Both OKLabViewer and OKLChViewer already consume this hook — zero duplication (DRY). The viewers do not need any position-swapping logic of their own.
+
+### 5. Visual distinction for clipped points
 
 **File:** `apps/web/src/components/viewers/shared/ParticlePoints.tsx`
 
@@ -66,7 +70,7 @@ When `showClipping` is active, points whose index appears in `trace.clippedIndic
 
 `ParticlePoints` receives a new optional prop `clippedIndices: Set<number> | null`. When non-null, the component renders the wireframe ring for indices in the set.
 
-### 5. PointInfoPanel: Always show both values
+### 6. PointInfoPanel: Always show both values
 
 **File:** `apps/web/src/components/info/PointInfoPanel.tsx`
 
@@ -79,7 +83,7 @@ Always display both clipped and unclipped color info for the selected point:
 
 Note: clipped values are only available for the last frame (since `trace.clippedPositions` is computed from the final optimization result). When viewing earlier frames, omit the clipped section.
 
-### 6. UI: Toggle placement
+### 7. UI: Toggle placement
 
 **File:** `apps/web/src/components/controls/LayerToggles.tsx`
 
@@ -92,9 +96,11 @@ finalizeColors() → { colors, clippedIndices, clippedPositions }
        ↓
 OptimizationTrace.clippedPositions (new field)
        ↓
-Store: showClipping toggle (with frame/morph interlocks)
+viewerSlice: showClipping (pure boolean toggle)
        ↓
-OKLabViewer: positions = showClipping ? trace.clippedPositions : morphInterpolated
+useClippingInterlock: coordinates frame/morph side effects
+       ↓
+useMorphInterpolation: returns clippedPositions when showClipping is active (DRY)
        ↓
 ParticlePoints: clippedIndices prop → ring on clipped points
        ↓
@@ -104,6 +110,6 @@ PointInfoPanel: always shows both clipped/unclipped values
 ## Testing
 
 - **Core unit test**: `finalizeColors` returns correct `clippedPositions` — identity for in-gamut, clipped OKLab for out-of-gamut.
-- **Store test**: `toggleClipping` jumps to last frame, auto-disables on frame change or morph change.
+- **Interlock hook test**: `useClippingInterlock` jumps to last frame on activation, auto-disables on frame change or morph change.
 - **PointInfoPanel test**: Renders both clipped and unclipped values when point is clipped; shows "In gamut" when not.
 - **Visual/manual**: Run dev server, generate a palette with out-of-gamut points, toggle clipping, verify points snap to gamut boundary and clipped points show rings.
